@@ -10,6 +10,7 @@ require_once 'db.php';
 require_once 'cookies.php';
 require_once 'redirect.php';
 require_once 'requestfunc.php';
+require_once 'fbcapi.php';
 
 $name = '';
 if (isset($_POST['name']))
@@ -74,6 +75,7 @@ if (!$is_duplicate){
     switch($res["info"]["http_code"]){
         case 302:
             add_lead($subid,$name,$phone);
+            capi_send_lead($name,$phone,$subid);
             if ($black_land_use_custom_thankyou_page ){
                 redirect("thankyou/thankyou.php?".http_build_query($_GET),302,false);
             }
@@ -83,6 +85,7 @@ if (!$is_duplicate){
             break;
         case 200:
             add_lead($subid,$name,$phone);
+            capi_send_lead($name,$phone,$subid);
             if ($black_land_use_custom_thankyou_page ){
                 jsredirect("thankyou/thankyou.php?".http_build_query($_GET));
             }

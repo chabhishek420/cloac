@@ -5,12 +5,17 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 //Конец включения отладочной информации
 
+// Bypass cloaker for admin panel
+if (strpos($_SERVER['REQUEST_URI'], '/admin/') === 0) {
+    return;
+}
+
 require_once 'core.php';
 require_once 'settings.php';
 require_once 'db.php';
 require_once 'main.php';
 //передаём все параметры в кло
-$cloaker = new Cloaker($os_white,$country_white,$lang_white,$ip_black_filename,$ip_black_cidr,$tokens_black,$url_should_contain,$ua_black,$isp_black,$block_without_referer,$referer_stopwords,$block_vpnandtor);
+$cloaker = new Cloaker($os_white,$country_white,$lang_white,$ip_black_filename,$ip_black_cidr,$tokens_black,$url_should_contain,$ua_black,$isp_black,$block_without_referer,$referer_stopwords,$block_vpnandtor,$block_spyservices,$block_datacenter,$vpn_fallback,$proxycheck_key,$ipqs_key);
 
 //если включен full_cloak_on, то шлём всех на white page, полностью набрасываем плащ)
 if ($tds_mode=='full') {

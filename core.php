@@ -24,9 +24,85 @@ class Cloaker{
 	var $referer_stopwords;
     var $block_vpnandtor;
     var $isp_black;
+    var $block_spyservices;
+    var $block_datacenter;
+    var $vpn_fallback;
+    var $proxycheck_key;
+    var $ipqs_key;
+    var $detect=[];
     var $result=[];
 
-	public function __construct($os_white,$country_white,$lang_white,$ip_black_filename,$ip_black_cidr,$tokens_black,$url_should_contain,$ua_black,$isp_black,$block_without_referer,$referer_stopwords,$block_vpnandtor){
+    //Паттерны шпионских сервисов (UA подстроки)
+    private $spy_ua_patterns = [
+        'AdSpy','adspy',
+        'AdPlexity','adplexity',
+        'Anstrex','anstrex',
+        'BigSpy','bigspy',
+        'PiPiADS','pipiads',
+        'SpyPush','spypush',
+        'AdHeart','adheart',
+        'Adbeat','adbeat',
+        'WhatRunsWhere','whatrunswhere',
+        'PowerAdSpy','poweradspy',
+        'Dropispy','dropispy',
+        'SocialAdScout','socialadscout',
+        'AdSector','adsector',
+        'SemrushBot','semrush',
+        'AhrefsBot','ahrefs',
+        'DotBot','dotbot',
+        'MJ12bot','mj12bot',
+        'SimilarWeb','similarweb',
+        'SEOkicks','seokicks',
+        'BLEXBot','blexbot',
+        'MegaIndex','megaindex',
+        'SerpstatBot','serpstatbot',
+        'DataForSeoBot','dataforseo',
+        'Bytespider','bytespider',
+        'PetalBot','petalbot',
+        'GPTBot','gptbot',
+        'CCBot','ccbot',
+        'ClaudeBot','claudebot',
+        'anthropic-ai',
+        'PerplexityBot','perplexitybot',
+        'HeadlessChrome',
+        'PhantomJS','phantomjs',
+        'Puppeteer','puppeteer',
+        'Playwright','playwright',
+        'Selenium','selenium',
+        'webdriver',
+    ];
+
+    //Паттерны шпионских сервисов (домены в реферере)
+    private $spy_referer_domains = [
+        'adspy.com',
+        'adplexity.com',
+        'anstrex.com',
+        'bigspy.com',
+        'pipiads.com',
+        'spypush.com',
+        'adheart.me',
+        'adbeat.com',
+        'whatrunswhere.com',
+        'dropispy.com',
+        'poweradspy.com',
+        'socialadscout.com',
+        'adsector.com',
+        'semrush.com',
+        'ahrefs.com',
+        'similarweb.com',
+        'moz.com',
+        'majestic.com',
+        'seokicks.de',
+        'serpstat.com',
+        'dataforseo.com',
+        'spyfu.com',
+        'nativeadsbuzz.com',
+        'admobispy.com',
+        'magicadz.co',
+        'idvert.com',
+    ];
+
+	public function __construct($os_white,$country_white,$lang_white,$ip_black_filename,$ip_black_cidr,$tokens_black,$url_should_contain,$ua_black,$isp_black,$block_without_referer,$referer_stopwords,$block_vpnandtor,$block_spyservices=true,$block_datacenter=true,$vpn_fallback=false,$proxycheck_key='',$ipqs_key=''){
 		$this->os_white = $os_white;
 		$this->country_white = $country_white;
 		$this->lang_white=$lang_white;
@@ -39,6 +115,11 @@ class Cloaker{
 		$this->block_without_referer = $block_without_referer;
 		$this->referer_stopwords = $referer_stopwords;
 		$this->block_vpnandtor = $block_vpnandtor;
+		$this->block_spyservices = $block_spyservices;
+		$this->block_datacenter = $block_datacenter;
+		$this->vpn_fallback = $vpn_fallback;
+		$this->proxycheck_key = $proxycheck_key;
+		$this->ipqs_key = $ipqs_key;
 		$this->detect();
 	}
 
@@ -68,18 +149,68 @@ class Cloaker{
 		$this->detect=$a;
 	}
 
+	//Основной API blackbox.ipinfo.app
 	private function blackbox($ip){
         $url = 'https://blackbox.ipinfo.app/lookup/';
-        $res = file_get_contents($url . $ip);
+        $ctx = stream_context_create(['http'=>['timeout'=>5]]);
+        $res = @file_get_contents($url . $ip, false, $ctx);
+        $headers = function_exists('http_get_last_response_headers') ? http_get_last_response_headers() : (isset($http_response_header)?$http_response_header:[]);
 
-        if(!is_string($res) || !strpos($http_response_header[0], "200")){
-			return false;
+        if(!is_string($res) || empty($headers) || !strpos($headers[0], "200")){
+			return null; //API недоступен - возвращаем null вместо false
         }
 
         if($res !== null && $res === 'Y'){
             return true;
         }
 
+        return false;
+    }
+
+    //Фоллбэк: ProxyCheck.io
+    private function proxycheck($ip){
+        if(empty($this->proxycheck_key)) return null;
+        $url = 'http://proxycheck.io/v2/'.$ip.'?key='.$this->proxycheck_key.'&vpn=1&risk=1';
+        $ctx = stream_context_create(['http'=>['timeout'=>5]]);
+        $res = @file_get_contents($url, false, $ctx);
+        if(!is_string($res)) return null;
+        $data = @json_decode($res, true);
+        if(!is_array($data) || !isset($data[$ip])) return null;
+        $info = $data[$ip];
+        if(isset($info['proxy']) && $info['proxy']==='yes') return true;
+        if(isset($info['type']) && in_array(strtolower($info['type']),['vpn','tor','socks','inference engine','hosting'])) return true;
+        return false;
+    }
+
+    //Фоллбэк: IPQualityScore
+    private function ipqs($ip){
+        if(empty($this->ipqs_key)) return null;
+        $url = 'https://ipqualityscore.com/api/json/ip/'.$this->ipqs_key.'/'.$ip.'?strictness=1&allow_public_access_points=true';
+        $ctx = stream_context_create(['http'=>['timeout'=>5]]);
+        $res = @file_get_contents($url, false, $ctx);
+        if(!is_string($res)) return null;
+        $data = @json_decode($res, true);
+        if(!is_array($data) || !isset($data['success']) || $data['success']!==true) return null;
+        if(!empty($data['vpn']) || !empty($data['tor']) || !empty($data['proxy']) || !empty($data['is_crawler'])) return true;
+        if(isset($data['fraud_score']) && $data['fraud_score']>=85) return true;
+        return false;
+    }
+
+    //Проверка VPN/Tor с фоллбэками
+    private function check_vpn($ip){
+        //Сначала blackbox
+        $result = $this->blackbox($ip);
+        if($result===true) return true;
+        if($result===false) return false;
+        //blackbox недоступен - пробуем фоллбэки
+        if(!$this->vpn_fallback) return false;
+        //ProxyCheck.io
+        $result = $this->proxycheck($ip);
+        if($result===true) return true;
+        if($result===false) return false;
+        //IPQualityScore
+        $result = $this->ipqs($ip);
+        if($result===true) return true;
         return false;
     }
 
@@ -117,12 +248,46 @@ class Cloaker{
 			}
 		}
 
+		//Проверка IP по базе датацентров
+		if($this->block_datacenter){
+			$dc_file = __DIR__."/bases/datacenter.txt";
+			if(file_exists($dc_file)){
+				$dc_cidr = file($dc_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+				if(!empty($dc_cidr) && IpUtils::checkIp($current_ip, $dc_cidr)===true){
+					$result=1;
+					$this->result[]='datacenter';
+				}
+			}
+		}
+
 		if ($this->block_vpnandtor){
-            if ($this->blackbox($current_ip)===true){
+            if ($this->check_vpn($current_ip)===true){
 				$result=1;
 				$this->result[]='vnp&tor';
             }
         }
+
+		//Проверка шпионских сервисов (UA + реферер)
+		if($this->block_spyservices){
+			$ua=$this->detect['ua'];
+			foreach($this->spy_ua_patterns as $spy_ua){
+				if(stripos($ua,$spy_ua)!==false){
+					$result=1;
+					$this->result[]='spy:'.$spy_ua;
+					break;
+				}
+			}
+			$ref=$this->detect['referer'];
+			if(!empty($ref)){
+				foreach($this->spy_referer_domains as $spy_ref){
+					if(stripos($ref,$spy_ref)!==false){
+						$result=1;
+						$this->result[]='spyref:'.$spy_ref;
+						break;
+					}
+				}
+			}
+		}
 
 		if($this->ua_black!=[])
 		{

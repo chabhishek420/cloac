@@ -9,6 +9,7 @@ require_once 'settings.php';
 require_once 'db.php';
 require_once 'url.php';
 require_once 'requestfunc.php';
+require_once 'fbcapi.php';
 
 $curLink = 'http' . (isset($_SERVER['HTTPS']) ? 's' : '') . '://' . "{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
 $subid = $_REQUEST['subid'] ?? '';
@@ -43,6 +44,9 @@ switch ($status) {
 }
 add_postback_log($subid, $inner_status, $payout);
 $res = update_lead($subid, $inner_status, $payout);
+if($inner_status === 'Purchase'){
+    capi_send_purchase($subid, $payout);
+}
 foreach ($s2s_postbacks as $s2s) {
     if (!in_array($inner_status, $s2s['events'])) continue;
     if (empty($s2s['url'])) continue;

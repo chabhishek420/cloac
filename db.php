@@ -73,12 +73,16 @@ function add_black_click($subid, $data, $preland, $land)
 
 function add_lead($subid, $name, $phone, $status = 'Lead')
 {
+    global $fbpixel_subname;
     $dataDir = __DIR__ . "/logs";
     $leadsStore = new Store("leads", $dataDir);
 
     $fbp = get_cookie('_fbp');
     $fbclid = get_cookie('fbclid');
     if ($fbclid === '') $fbclid = get_cookie('_fbc');
+
+    $pixelid = '';
+    if (!empty($fbpixel_subname)) $pixelid = get_cookie($fbpixel_subname);
 
     if ($status == '') $status = 'Lead';
 
@@ -98,6 +102,7 @@ function add_lead($subid, $name, $phone, $status = 'Lead')
         "status" => $status,
         "fbp" => $fbp,
         "fbclid" => $fbclid,
+        "pixelid" => $pixelid,
         "preland" => $preland,
         "land" => $land
     ];
