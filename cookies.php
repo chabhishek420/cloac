@@ -38,6 +38,11 @@ function set_facebook_cookies(){
 		ywbsetcookie('fbclid',$_GET['fbclid'],'/');
 }
 
+function set_google_cookies(){
+	if (isset($_GET['gclid']) && $_GET['gclid']!='')
+		ywbsetcookie('gclid',$_GET['gclid'],'/');
+}
+
 //проверяем, если у пользователя установлена куки, что он уже конвертился, а также имя и телефон, то сверяем время
 //если прошло менее суток, то хуй ему, а не лид, обнуляем время
 function has_conversion_cookies($name,$phone){

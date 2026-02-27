@@ -110,6 +110,7 @@ function black($clkrdetect)
 	
 	$cursubid=set_subid();
     set_facebook_cookies();
+    set_google_cookies();
 
 
 	$landings=[];

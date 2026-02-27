@@ -121,6 +121,12 @@
             "conversion": {
                 "event": "Purchase",
                 "fireonbutton": false
+            },
+            "eventsapi": {
+                "enabled": false,
+                "accesstoken": "",
+                "testcode": "",
+                "leadevent": "SubmitForm"
             }
         }
     },

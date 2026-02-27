@@ -67,6 +67,10 @@ $tt_use_viewcontent = $conf['pixels.tt.viewcontent.use'];
 $tt_view_content_time = $conf['pixels.tt.viewcontent.time'];
 $tt_view_content_percent = $conf['pixels.tt.viewcontent.percent'];
 $tt_thankyou_event = $conf['pixels.tt.conversion.event'];
+$tt_events_enabled = $conf->get('pixels.tt.eventsapi.enabled',false);
+$tt_access_token = $conf->get('pixels.tt.eventsapi.accesstoken','');
+$tt_test_code = $conf->get('pixels.tt.eventsapi.testcode','');
+$tt_lead_event = $conf->get('pixels.tt.eventsapi.leadevent','SubmitForm');
 $tt_add_button_pixel= $conf['pixels.tt.conversion.fireonbutton'];
 
 $tds_mode = $conf['tds.mode'];

@@ -73,7 +73,7 @@ function add_black_click($subid, $data, $preland, $land)
 
 function add_lead($subid, $name, $phone, $status = 'Lead')
 {
-    global $fbpixel_subname;
+    global $fbpixel_subname, $ttpixel_subname;
     $dataDir = __DIR__ . "/logs";
     $leadsStore = new Store("leads", $dataDir);
 
@@ -83,6 +83,15 @@ function add_lead($subid, $name, $phone, $status = 'Lead')
 
     $pixelid = '';
     if (!empty($fbpixel_subname)) $pixelid = get_cookie($fbpixel_subname);
+
+    // TikTok tracking data
+    $ttp = get_cookie('_ttp');
+    $ttclid = get_cookie('ttclid');
+    $ttpixelid = '';
+    if (!empty($ttpixel_subname)) $ttpixelid = get_cookie($ttpixel_subname);
+
+    // Google Ads tracking data
+    $gclid = get_cookie('gclid');
 
     if ($status == '') $status = 'Lead';
 
@@ -103,6 +112,10 @@ function add_lead($subid, $name, $phone, $status = 'Lead')
         "fbp" => $fbp,
         "fbclid" => $fbclid,
         "pixelid" => $pixelid,
+        "ttp" => $ttp,
+        "ttclid" => $ttclid,
+        "ttpixelid" => $ttpixelid,
+        "gclid" => $gclid,
         "preland" => $preland,
         "land" => $land
     ];
