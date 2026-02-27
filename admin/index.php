@@ -194,6 +194,12 @@ $tableOutput.="</tbody></TABLE>";
                             </ul>
                         </li>
                         <li>
+                            <a href="campaigns/index.php?password=<?=$_GET['password']?><?=$date_str!==''?$date_str:''?>" aria-expanded="false">
+                                <i class="icon nalika-diamond icon-wrap"></i>
+                                <span class="mini-click-non">Campaigns</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="editsettings.php?password=<?=$_GET['password']?><?=$date_str!==''?$date_str:''?>" aria-expanded="false">
                                 <i class="icon nalika-table icon-wrap"></i>
                                 <span class="mini-click-non">Settings</span>
