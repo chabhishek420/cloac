@@ -31,6 +31,7 @@ class CampaignManager {
             'status' => 'active', // active, paused, archived
             'created_at' => time(),
             'updated_at' => time(),
+            'white_action' => $data['white_action'] ?? 'redirect',
             'settings' => $data['settings'],
             'urls' => [
                 'white' => $data['white_urls'] ?? [],
@@ -105,8 +106,50 @@ class CampaignManager {
         $settingsFile = __DIR__ . '/../../settings.json';
         $currentSettings = json_decode(file_get_contents($settingsFile), true);
 
-        // Merge campaign settings with current settings
+        // Merge campaign template settings with current settings
         $newSettings = array_replace_recursive($currentSettings, $campaign['settings']);
+
+        // Apply white page URLs (default to redirect action)
+        if (!empty($campaign['urls']['white'])) {
+            $whiteAction = $campaign['white_action'] ?? 'redirect';
+
+            if ($whiteAction === 'folder') {
+                $newSettings['white']['action'] = 'folder';
+                $newSettings['white']['folder']['names'] = $campaign['urls']['white'];
+            } elseif ($whiteAction === 'redirect') {
+                $newSettings['white']['action'] = 'redirect';
+                $newSettings['white']['redirect']['urls'] = $campaign['urls']['white'];
+            } elseif ($whiteAction === 'curl') {
+                $newSettings['white']['action'] = 'curl';
+                $newSettings['white']['curl']['urls'] = $campaign['urls']['white'];
+            }
+        }
+
+        // Apply black prelanding URLs
+        if (!empty($campaign['urls']['black']['prelandings'])) {
+            $newSettings['black']['prelanding']['action'] = 'folder';
+            $newSettings['black']['prelanding']['folders'] = $campaign['urls']['black']['prelandings'];
+        }
+
+        // Apply black landing URLs
+        if (!empty($campaign['urls']['black']['landings'])) {
+            $newSettings['black']['landing']['action'] = 'folder';
+            $newSettings['black']['landing']['folder']['names'] = $campaign['urls']['black']['landings'];
+        }
+
+        // Apply pixel IDs
+        if (!empty($campaign['pixels']['facebook'])) {
+            $newSettings['pixels']['fb']['id'] = $campaign['pixels']['facebook'];
+        }
+        if (!empty($campaign['pixels']['tiktok'])) {
+            $newSettings['pixels']['tiktok']['id'] = $campaign['pixels']['tiktok'];
+        }
+        if (!empty($campaign['pixels']['gtm'])) {
+            $newSettings['pixels']['gtm']['id'] = $campaign['pixels']['gtm'];
+        }
+
+        // Store active campaign ID
+        $newSettings['active_campaign_id'] = $campaignId;
 
         // Write back to settings.json
         file_put_contents($settingsFile, json_encode($newSettings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));

@@ -154,6 +154,17 @@ $currentTemplate = $templates[$campaign['template']] ?? null;
             <div class="form-section">
                 <h4>White Pages (Safe Content)</h4>
                 <p class="text-muted">URLs shown to bots and moderators</p>
+
+                <div class="form-group">
+                    <label>White Page Action</label>
+                    <select class="form-control" name="white_action">
+                        <option value="redirect" <?= ($campaign['white_action'] ?? 'redirect') === 'redirect' ? 'selected' : '' ?>>Redirect (302/303 to external URL)</option>
+                        <option value="folder" <?= ($campaign['white_action'] ?? 'redirect') === 'folder' ? 'selected' : '' ?>>Folder (serve local HTML files)</option>
+                        <option value="curl" <?= ($campaign['white_action'] ?? 'redirect') === 'curl' ? 'selected' : '' ?>>CURL (proxy external site content)</option>
+                    </select>
+                    <small class="form-text text-muted">How to handle blocked traffic</small>
+                </div>
+
                 <div class="url-list" id="white_urls">
                     <?php
                     $whiteUrls = $campaign['urls']['white'] ?? [];

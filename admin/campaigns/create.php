@@ -336,6 +336,17 @@ $templates = PlatformTemplates::getTemplates();
                 <div class="form-section">
                     <h4>White Pages (Safe Content)</h4>
                     <p class="text-muted">URLs shown to bots and moderators</p>
+
+                    <div class="form-group">
+                        <label>White Page Action</label>
+                        <select class="form-control" id="white_action">
+                            <option value="redirect">Redirect (302/303 to external URL)</option>
+                            <option value="folder">Folder (serve local HTML files)</option>
+                            <option value="curl">CURL (proxy external site content)</option>
+                        </select>
+                        <small class="form-text text-muted">How to handle blocked traffic</small>
+                    </div>
+
                     <div class="url-list" id="white_urls">
                         <div class="url-item">
                             <input type="text" class="form-control white-url" placeholder="https://example.com/safe-page">
@@ -436,6 +447,10 @@ $templates = PlatformTemplates::getTemplates();
 
                 <div class="review-section">
                     <h5>URLs</h5>
+                    <div class="review-item">
+                        <span class="review-label">White Page Action:</span>
+                        <span class="review-value" id="review_white_action"></span>
+                    </div>
                     <div class="review-item">
                         <span class="review-label">White Pages:</span>
                         <span class="review-value" id="review_white_count"></span>
@@ -562,6 +577,14 @@ $templates = PlatformTemplates::getTemplates();
             $('#review_template').text(template.name);
             $('#review_status').text($('#campaign_status').val());
 
+            const whiteAction = $('#white_action').val();
+            const whiteActionLabels = {
+                'redirect': 'Redirect',
+                'folder': 'Folder',
+                'curl': 'CURL Proxy'
+            };
+            $('#review_white_action').text(whiteActionLabels[whiteAction] || whiteAction);
+
             const whiteUrls = $('.white-url').map(function() { return $(this).val(); }).get().filter(v => v);
             const prelandingUrls = $('.prelanding-url').map(function() { return $(this).val(); }).get().filter(v => v);
             const landingUrls = $('.landing-url').map(function() { return $(this).val(); }).get().filter(v => v);
@@ -622,6 +645,7 @@ $templates = PlatformTemplates::getTemplates();
                 name: $('#campaign_name').val(),
                 template: selectedTemplate,
                 status: $('#campaign_status').val(),
+                white_action: $('#white_action').val(),
                 white_urls: whiteUrls,
                 black_prelandings: prelandingUrls,
                 black_landings: landingUrls,

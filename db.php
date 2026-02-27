@@ -69,6 +69,9 @@ function add_black_click($subid, $data, $preland, $land)
         "land" => $landing
     ];
     $bclicksStore->insert($click);
+
+    // Update campaign stats if campaign is active
+    update_campaign_click_stats();
 }
 
 function add_lead($subid, $name, $phone, $status = 'Lead')
@@ -119,7 +122,13 @@ function add_lead($subid, $name, $phone, $status = 'Lead')
         "preland" => $preland,
         "land" => $land
     ];
-    return $leadsStore->insert($lead);
+
+    $result = $leadsStore->insert($lead);
+
+    // Update campaign conversion stats
+    update_campaign_conversion_stats(0);
+
+    return $result;
 }
 
 function update_lead($subid, $status, $payout)
@@ -201,3 +210,68 @@ function lead_is_duplicate($subid, $phone)
     }
 }
 
+
+
+/**
+ * Get active campaign ID from settings.json
+ */
+function get_active_campaign_id() {
+    $settingsFile = __DIR__ . "/settings.json";
+    if (!file_exists($settingsFile)) {
+        return null;
+    }
+
+    $settings = json_decode(file_get_contents($settingsFile), true);
+    return $settings['active_campaign_id'] ?? null;
+}
+
+/**
+ * Update campaign click stats
+ */
+function update_campaign_click_stats() {
+    $campaignId = get_active_campaign_id();
+    if (!$campaignId) {
+        return;
+    }
+
+    // Direct SleekDB update to avoid circular dependency
+    try {
+        $dataDir = __DIR__ . "/logs";
+        $campaignsStore = new Store('campaigns', $dataDir);
+        $campaign = $campaignsStore->findById($campaignId);
+
+        if ($campaign) {
+            $campaign['stats']['clicks'] = ($campaign['stats']['clicks'] ?? 0) + 1;
+            $campaign['updated_at'] = time();
+            $campaignsStore->updateById($campaignId, $campaign);
+        }
+    } catch (Exception $e) {
+        // Silently fail - don't break traffic flow if campaign tracking fails
+    }
+}
+
+/**
+ * Update campaign conversion stats
+ */
+function update_campaign_conversion_stats($revenue = 0) {
+    $campaignId = get_active_campaign_id();
+    if (!$campaignId) {
+        return;
+    }
+
+    // Direct SleekDB update to avoid circular dependency
+    try {
+        $dataDir = __DIR__ . "/logs";
+        $campaignsStore = new Store('campaigns', $dataDir);
+        $campaign = $campaignsStore->findById($campaignId);
+
+        if ($campaign) {
+            $campaign['stats']['conversions'] = ($campaign['stats']['conversions'] ?? 0) + 1;
+            $campaign['stats']['revenue'] = ($campaign['stats']['revenue'] ?? 0) + $revenue;
+            $campaign['updated_at'] = time();
+            $campaignsStore->updateById($campaignId, $campaign);
+        }
+    } catch (Exception $e) {
+        // Silently fail - don't break traffic flow if campaign tracking fails
+    }
+}

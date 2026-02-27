@@ -21,6 +21,7 @@ try {
                 'name' => $_POST['name'] ?? '',
                 'template' => $_POST['template'] ?? '',
                 'status' => $_POST['status'] ?? 'active',
+                'white_action' => $_POST['white_action'] ?? 'redirect',
                 'white_urls' => $_POST['white_urls'] ?? [],
                 'black_prelandings' => $_POST['black_prelandings'] ?? [],
                 'black_landings' => $_POST['black_landings'] ?? [],
@@ -48,6 +49,7 @@ try {
             $data = [
                 'name' => $_POST['name'] ?? null,
                 'status' => $_POST['status'] ?? null,
+                'white_action' => $_POST['white_action'] ?? null,
                 'urls' => [
                     'white' => $_POST['white_urls'] ?? null,
                     'black' => [
