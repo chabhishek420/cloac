@@ -15,7 +15,7 @@ require_once 'settings.php';
 require_once 'db.php';
 require_once 'main.php';
 //передаём все параметры в кло
-$cloaker = new Cloaker($os_white,$country_white,$lang_white,$ip_black_filename,$ip_black_cidr,$tokens_black,$url_should_contain,$ua_black,$isp_black,$block_without_referer,$referer_stopwords,$block_vpnandtor,$block_spyservices,$block_datacenter,$vpn_fallback,$proxycheck_key,$ipqs_key);
+$cloaker = new Cloaker($os_white,$country_white,$lang_white,$ip_black_filename,$ip_black_cidr,$tokens_black,$url_should_contain,$ua_black,$isp_black,$block_without_referer,$referer_stopwords,$block_vpnandtor,$block_spyservices,$block_datacenter,$vpn_fallback,$proxycheck_key,$ipqs_key,$botd_enabled,$botd_timeout);
 
 //если включен full_cloak_on, то шлём всех на white page, полностью набрасываем плащ)
 if ($tds_mode=='full') {

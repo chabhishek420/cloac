@@ -94,6 +94,8 @@ $block_datacenter = $conf->get('tds.filters.blocked.datacenter',true);
 $vpn_fallback = $conf->get('tds.filters.blocked.vpnfallback',false);
 $proxycheck_key = $conf->get('tds.filters.blocked.proxycheckkey','');
 $ipqs_key = $conf->get('tds.filters.blocked.ipqskey','');
+$botd_enabled = $conf->get('tds.filters.blocked.botd.enabled',false);
+$botd_timeout = $conf->get('tds.filters.blocked.botd.timeout',300);
 
 $back_button_action = $conf['scripts.back.action'];
 $replace_back_address = $conf['scripts.back.value'];

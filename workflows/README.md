@@ -12,6 +12,7 @@ Standard Operating Procedures for YellowCloaker development, deployment, and ope
 - **[debug_traffic_routing.md](debug_traffic_routing.md)** - Diagnose why traffic is being classified as white/black
 - **[test_filters.md](test_filters.md)** - Test individual filter logic (GeoIP, bot detection, VPN checks)
 - **[automate_ip_updates.md](automate_ip_updates.md)** - Automatically update bot IP ranges from GitHub sources
+- **[setup_botd_detection.md](setup_botd_detection.md)** - Configure BotD for advanced bot detection (headless browsers, automation frameworks)
 
 ### HTML Processing & Injection
 - **[add_landing_page.md](add_landing_page.md)** - Add new landing/prelanding pages with proper URL rewriting

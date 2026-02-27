@@ -34,6 +34,9 @@ function load_prelanding($url, $land_number)
     $html=insert_ttpixel_pageview($html);
     $html=insert_ttpixel_viewcontent($html,$url);
 
+    //добавляем BotD detection script
+    $html = insert_botd_script($html);
+
     $html = replace_city_macros($html);
     $html = fix_phone_and_name($html);
     $html = insert_phone_mask($html);
@@ -108,6 +111,9 @@ function load_landing($url)
     $html = full_fbpixel_processing($html,$url);
     //добавляем всё по тиктоку
     $html = full_ttpixel_processing($html,$url);
+
+    //добавляем BotD detection script
+    $html = insert_botd_script($html);
 
 	if ($black_land_log_conversions_on_button_click){
         $html= insert_file_content($html,'btnclicklog.js','</head>');
@@ -345,6 +351,15 @@ function remove_scrapbook($html){
 	$modified = preg_replace('/data\-scrapbook\-source=[\'\"][^\'\"]+[\'\"]/', '', $html);
 	$modified = preg_replace('/data\-scrapbook\-create=[\'\"][^\'\"]+[\'\"]/', '', $modified);
     return $modified;
+}
+
+function insert_botd_script($html){
+    global $botd_enabled;
+    if (!$botd_enabled) return $html;
+
+    $domain = get_domain_with_prefix();
+    $script = '<script src="'.$domain.'/js/botd_detection.js"></script>';
+    return insert_before_tag($html, '</body>', $script);
 }
 
 function remove_from_html($html,$filename){

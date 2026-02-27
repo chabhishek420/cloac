@@ -180,7 +180,11 @@
                 "datacenter": true,
                 "vpnfallback": false,
                 "proxycheckkey": "",
-                "ipqskey": ""
+                "ipqskey": "",
+                "botd": {
+                    "enabled": false,
+                    "timeout": 300
+                }
             }
         }
     },

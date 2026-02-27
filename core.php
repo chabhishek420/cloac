@@ -29,6 +29,8 @@ class Cloaker{
     var $vpn_fallback;
     var $proxycheck_key;
     var $ipqs_key;
+    var $botd_enabled;
+    var $botd_timeout;
     var $detect=[];
     var $result=[];
 
@@ -102,7 +104,7 @@ class Cloaker{
         'idvert.com',
     ];
 
-	public function __construct($os_white,$country_white,$lang_white,$ip_black_filename,$ip_black_cidr,$tokens_black,$url_should_contain,$ua_black,$isp_black,$block_without_referer,$referer_stopwords,$block_vpnandtor,$block_spyservices=true,$block_datacenter=true,$vpn_fallback=false,$proxycheck_key='',$ipqs_key=''){
+	public function __construct($os_white,$country_white,$lang_white,$ip_black_filename,$ip_black_cidr,$tokens_black,$url_should_contain,$ua_black,$isp_black,$block_without_referer,$referer_stopwords,$block_vpnandtor,$block_spyservices=true,$block_datacenter=true,$vpn_fallback=false,$proxycheck_key='',$ipqs_key='',$botd_enabled=false,$botd_timeout=300){
 		$this->os_white = $os_white;
 		$this->country_white = $country_white;
 		$this->lang_white=$lang_white;
@@ -120,6 +122,8 @@ class Cloaker{
 		$this->vpn_fallback = $vpn_fallback;
 		$this->proxycheck_key = $proxycheck_key;
 		$this->ipqs_key = $ipqs_key;
+		$this->botd_enabled = $botd_enabled;
+		$this->botd_timeout = $botd_timeout;
 		$this->detect();
 	}
 
@@ -368,6 +372,19 @@ class Cloaker{
 				if(!empty(stristr($isp,$isp_black_single))){
 					$result=1;
 					$this->result[]='isp';
+				}
+			}
+		}
+
+		//Проверка BotD (Bot Detection)
+		if($this->botd_enabled && session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['botd_result'])){
+			$botd = $_SESSION['botd_result'];
+			//Проверяем, что результат не старше настроенного таймаута
+			if(isset($botd['timestamp']) && (time() - $botd['timestamp']) < $this->botd_timeout){
+				if(isset($botd['bot']) && $botd['bot'] === 1){
+					$result=1;
+					$botKind = isset($botd['botKind']) ? $botd['botKind'] : 'unknown';
+					$this->result[]='botd:'.$botKind;
 				}
 			}
 		}
