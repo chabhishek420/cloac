@@ -145,6 +145,16 @@ try {
             echo json_encode(['success' => true]);
             break;
 
+        case 'deactivate':
+            // Deactivate the currently active campaign
+            $result = $manager->deactivateCampaign();
+            if (!$result) {
+                throw new Exception('Failed to deactivate campaign');
+            }
+
+            echo json_encode(['success' => true]);
+            break;
+
         case 'get':
             // Get single campaign
             $id = $_POST['id'] ?? $_GET['id'] ?? '';

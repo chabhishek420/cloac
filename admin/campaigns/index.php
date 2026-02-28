@@ -183,9 +183,16 @@ $activeCampaignId = $currentSettings['active_campaign_id'] ?? null;
     <div class="container-fluid mt-4">
         <div class="row">
             <div class="col-12">
-                <h2 class="mb-4">
-                    <i class="fas fa-bullhorn"></i> Campaign Management
-                </h2>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0">
+                        <i class="fas fa-bullhorn"></i> Campaign Management
+                    </h2>
+                    <?php if ($activeCampaignId): ?>
+                        <button class="btn btn-warning" onclick="deactivateCampaign()">
+                            <i class="fas fa-power-off"></i> Deactivate Active Campaign
+                        </button>
+                    <?php endif; ?>
+                </div>
 
                 <?php if (empty($campaigns)): ?>
                     <div class="empty-state">
@@ -350,6 +357,21 @@ $activeCampaignId = $currentSettings['active_campaign_id'] ?? null;
                 }, function(response) {
                     if (response.success) {
                         alert('Campaign deleted successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.error);
+                    }
+                }, 'json');
+            }
+        }
+
+        function deactivateCampaign() {
+            if (confirm('Deactivate the current campaign? This will return to manual configuration.')) {
+                $.post('api.php', {
+                    action: 'deactivate'
+                }, function(response) {
+                    if (response.success) {
+                        alert('Campaign deactivated successfully!');
                         location.reload();
                     } else {
                         alert('Error: ' + response.error);

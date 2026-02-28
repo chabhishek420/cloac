@@ -119,7 +119,7 @@ class CampaignManager {
     }
 
     /**
-     * Apply campaign settings to global settings.json
+     * Apply campaign settings to global settings.json with atomic write and backup
      */
     public function applyCampaignSettings($campaignId) {
         $campaign = $this->getCampaign($campaignId);
@@ -175,10 +175,84 @@ class CampaignManager {
         // Store active campaign ID
         $newSettings['active_campaign_id'] = $campaignId;
 
-        // Write back to settings.json
-        file_put_contents($settingsFile, json_encode($newSettings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        // Use atomic write with backup
+        return $this->atomicWriteSettings($settingsFile, $newSettings);
+    }
+
+    /**
+     * Atomic write to settings.json with backup and rollback capability
+     */
+    private function atomicWriteSettings($settingsFile, $newSettings) {
+        // Create backup with timestamp
+        $backupFile = $settingsFile . '.backup.' . time();
+        if (!copy($settingsFile, $backupFile)) {
+            error_log("Failed to create backup of settings.json");
+            return false;
+        }
+
+        // Encode JSON
+        $json = json_encode($newSettings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON encoding failed: " . json_last_error_msg());
+            unlink($backupFile);
+            return false;
+        }
+
+        // Write to temporary file with exclusive lock
+        $tempFile = $settingsFile . '.tmp.' . getmypid();
+        $fp = fopen($tempFile, 'w');
+        if (!$fp) {
+            error_log("Failed to open temporary file for writing");
+            unlink($backupFile);
+            return false;
+        }
+
+        if (!flock($fp, LOCK_EX)) {
+            error_log("Failed to acquire lock on temporary file");
+            fclose($fp);
+            unlink($tempFile);
+            unlink($backupFile);
+            return false;
+        }
+
+        fwrite($fp, $json);
+        fflush($fp);
+        flock($fp, LOCK_UN);
+        fclose($fp);
+
+        // Atomic rename (POSIX guarantees atomicity)
+        if (!rename($tempFile, $settingsFile)) {
+            error_log("Failed to rename temporary file to settings.json");
+            unlink($tempFile);
+            unlink($backupFile);
+            return false;
+        }
+
+        // Cleanup old backups (keep only last 5)
+        $this->cleanupOldBackups($settingsFile, 5);
 
         return true;
+    }
+
+    /**
+     * Cleanup old backup files, keeping only the most recent N backups
+     */
+    private function cleanupOldBackups($settingsFile, $keepCount = 5) {
+        $backupPattern = $settingsFile . '.backup.*';
+        $backups = glob($backupPattern);
+
+        if (count($backups) > $keepCount) {
+            // Sort by modification time (oldest first)
+            usort($backups, function($a, $b) {
+                return filemtime($a) - filemtime($b);
+            });
+
+            // Delete oldest backups
+            $toDelete = array_slice($backups, 0, count($backups) - $keepCount);
+            foreach ($toDelete as $backup) {
+                unlink($backup);
+            }
+        }
     }
 
     /**
@@ -208,20 +282,65 @@ class CampaignManager {
     }
 
     /**
-     * Update campaign stats
+     * Update campaign stats with file locking to prevent race conditions
      */
     public function updateStats($campaignId, $clicks = 0, $conversions = 0, $revenue = 0) {
-        $campaign = $this->getCampaign($campaignId);
-        if (!$campaign) {
+        $lockFile = __DIR__ . '/../../logs/campaigns/.stats.lock';
+        $lockDir = dirname($lockFile);
+
+        // Ensure lock directory exists
+        if (!is_dir($lockDir)) {
+            mkdir($lockDir, 0755, true);
+        }
+
+        // Open lock file
+        $fp = fopen($lockFile, 'c');
+        if (!$fp) {
+            error_log("Failed to open lock file for campaign stats update");
             return false;
         }
 
-        $campaign['stats']['clicks'] += $clicks;
-        $campaign['stats']['conversions'] += $conversions;
-        $campaign['stats']['revenue'] += $revenue;
-        $campaign['updated_at'] = time();
+        // Try to acquire exclusive lock with timeout
+        $retries = 0;
+        $maxRetries = 100;
+        while (!flock($fp, LOCK_EX | LOCK_NB) && $retries < $maxRetries) {
+            usleep(10000); // 10ms
+            $retries++;
+        }
 
-        return $this->db->updateById($campaignId, $campaign);
+        if ($retries >= $maxRetries) {
+            fclose($fp);
+            error_log("Failed to acquire lock for campaign stats update after {$maxRetries} retries");
+            return false;
+        }
+
+        try {
+            // Read current campaign data
+            $campaign = $this->getCampaign($campaignId);
+            if (!$campaign) {
+                return false;
+            }
+
+            // Update stats
+            $campaign['stats']['clicks'] += $clicks;
+            $campaign['stats']['conversions'] += $conversions;
+            $campaign['stats']['revenue'] += $revenue;
+            $campaign['updated_at'] = time();
+
+            // Remove _id and id before updating
+            $updateData = $campaign;
+            unset($updateData['_id']);
+            unset($updateData['id']);
+
+            // Write updated data
+            $result = $this->db->updateById($campaignId, $updateData);
+
+            return $result;
+        } finally {
+            // Always release lock
+            flock($fp, LOCK_UN);
+            fclose($fp);
+        }
     }
 
     /**
@@ -245,5 +364,30 @@ class CampaignManager {
             'epc' => $clicks > 0 ? ($revenue / $clicks) : 0,
             'avg_payout' => $conversions > 0 ? ($revenue / $conversions) : 0,
         ];
+    }
+
+    /**
+     * Deactivate the currently active campaign
+     * Removes active_campaign_id from settings.json
+     */
+    public function deactivateCampaign() {
+        $settingsFile = __DIR__ . '/../../settings.json';
+
+        if (!file_exists($settingsFile)) {
+            return false;
+        }
+
+        $settings = json_decode(file_get_contents($settingsFile), true);
+
+        if (!isset($settings['active_campaign_id'])) {
+            // No active campaign, nothing to deactivate
+            return true;
+        }
+
+        // Remove active campaign ID
+        unset($settings['active_campaign_id']);
+
+        // Use atomic write with backup
+        return $this->atomicWriteSettings($settingsFile, $settings);
     }
 }
