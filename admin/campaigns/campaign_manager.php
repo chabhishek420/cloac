@@ -15,9 +15,25 @@ class CampaignManager {
         $this->db = new \SleekDB\Store('campaigns', __DIR__ . '/../../logs', [
             'auto_cache' => true,
             'cache_lifetime' => null,
-            'timeout' => 120,
-            'primary_key' => 'id',
+            'timeout' => false, // Deprecated, use set_timeout_limit() if needed
         ]);
+    }
+
+    /**
+     * Normalize campaign data (map _id to id for consistency)
+     */
+    private function normalizeCampaign($campaign) {
+        if ($campaign && isset($campaign['_id'])) {
+            $campaign['id'] = $campaign['_id'];
+        }
+        return $campaign;
+    }
+
+    /**
+     * Normalize multiple campaigns
+     */
+    private function normalizeCampaigns($campaigns) {
+        return array_map([$this, 'normalizeCampaign'], $campaigns);
     }
 
     /**
@@ -25,7 +41,6 @@ class CampaignManager {
      */
     public function createCampaign($data) {
         $campaign = [
-            'id' => uniqid('camp_', true),
             'name' => $data['name'],
             'template' => $data['template'],
             'status' => 'active', // active, paused, archived
@@ -52,14 +67,16 @@ class CampaignManager {
             ],
         ];
 
-        return $this->db->insert($campaign);
+        $result = $this->db->insert($campaign);
+        return $this->normalizeCampaign($result);
     }
 
     /**
      * Get campaign by ID
      */
     public function getCampaign($id) {
-        return $this->db->findById($id);
+        $campaign = $this->db->findById($id);
+        return $this->normalizeCampaign($campaign);
     }
 
     /**
@@ -67,9 +84,11 @@ class CampaignManager {
      */
     public function getAllCampaigns($status = null) {
         if ($status) {
-            return $this->db->findBy(['status', '=', $status]);
+            $campaigns = $this->db->findBy(['status', '=', $status]);
+        } else {
+            $campaigns = $this->db->findAll();
         }
-        return $this->db->findAll();
+        return $this->normalizeCampaigns($campaigns);
     }
 
     /**
@@ -84,7 +103,12 @@ class CampaignManager {
         $updated = array_merge($campaign, $data);
         $updated['updated_at'] = time();
 
-        return $this->db->updateById($id, $updated);
+        // Remove _id and id before updating (SleekDB doesn't allow updating primary key)
+        $updateData = $updated;
+        unset($updateData['_id']);
+        unset($updateData['id']);
+
+        return $this->db->updateById($id, $updateData);
     }
 
     /**
@@ -166,8 +190,10 @@ class CampaignManager {
             return false;
         }
 
+        // Remove SleekDB's auto-generated _id and id fields
         unset($campaign['_id']);
-        $campaign['id'] = uniqid('camp_', true);
+        unset($campaign['id']);
+
         $campaign['name'] = $newName;
         $campaign['created_at'] = time();
         $campaign['updated_at'] = time();
@@ -177,7 +203,8 @@ class CampaignManager {
             'revenue' => 0,
         ];
 
-        return $this->db->insert($campaign);
+        $result = $this->db->insert($campaign);
+        return $this->normalizeCampaign($result);
     }
 
     /**

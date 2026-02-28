@@ -237,16 +237,32 @@ function update_campaign_click_stats() {
     // Direct SleekDB update to avoid circular dependency
     try {
         $dataDir = __DIR__ . "/logs";
-        $campaignsStore = new Store('campaigns', $dataDir);
+        $campaignsStore = new Store('campaigns', $dataDir, [
+            'auto_cache' => true,
+            'cache_lifetime' => null,
+            'timeout' => false,
+        ]);
         $campaign = $campaignsStore->findById($campaignId);
 
         if ($campaign) {
+            // Ensure stats array exists
+            if (!isset($campaign['stats'])) {
+                $campaign['stats'] = ['clicks' => 0, 'conversions' => 0, 'revenue' => 0];
+            }
+
             $campaign['stats']['clicks'] = ($campaign['stats']['clicks'] ?? 0) + 1;
             $campaign['updated_at'] = time();
-            $campaignsStore->updateById($campaignId, $campaign);
+
+            // Remove _id before updating (SleekDB doesn't allow updating primary key)
+            $updateData = $campaign;
+            unset($updateData['_id']);
+
+            // Update using the _id field as the ID parameter
+            $campaignsStore->updateById($campaign['_id'], $updateData);
         }
     } catch (Exception $e) {
         // Silently fail - don't break traffic flow if campaign tracking fails
+        error_log("Campaign click stats update failed: " . $e->getMessage());
     }
 }
 
@@ -262,16 +278,32 @@ function update_campaign_conversion_stats($revenue = 0) {
     // Direct SleekDB update to avoid circular dependency
     try {
         $dataDir = __DIR__ . "/logs";
-        $campaignsStore = new Store('campaigns', $dataDir);
+        $campaignsStore = new Store('campaigns', $dataDir, [
+            'auto_cache' => true,
+            'cache_lifetime' => null,
+            'timeout' => false,
+        ]);
         $campaign = $campaignsStore->findById($campaignId);
 
         if ($campaign) {
+            // Ensure stats array exists
+            if (!isset($campaign['stats'])) {
+                $campaign['stats'] = ['clicks' => 0, 'conversions' => 0, 'revenue' => 0];
+            }
+
             $campaign['stats']['conversions'] = ($campaign['stats']['conversions'] ?? 0) + 1;
             $campaign['stats']['revenue'] = ($campaign['stats']['revenue'] ?? 0) + $revenue;
             $campaign['updated_at'] = time();
-            $campaignsStore->updateById($campaignId, $campaign);
+
+            // Remove _id before updating (SleekDB doesn't allow updating primary key)
+            $updateData = $campaign;
+            unset($updateData['_id']);
+
+            // Update using the _id field as the ID parameter
+            $campaignsStore->updateById($campaign['_id'], $updateData);
         }
     } catch (Exception $e) {
         // Silently fail - don't break traffic flow if campaign tracking fails
+        error_log("Campaign conversion stats update failed: " . $e->getMessage());
     }
 }
