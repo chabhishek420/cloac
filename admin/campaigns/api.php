@@ -5,7 +5,9 @@
  */
 
 session_start();
-require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../../settings.php';
+require_once __DIR__ . '/../password.php';
+check_password();
 require_once __DIR__ . '/campaign_manager.php';
 
 header('Content-Type: application/json');
@@ -191,6 +193,13 @@ try {
             }
 
             echo json_encode(['success' => true, 'metrics' => $metrics]);
+            break;
+
+        case 'get_templates':
+            // Get platform templates
+            require_once __DIR__ . '/../templates/platform_templates.php';
+            $templates = PlatformTemplates::getTemplates();
+            echo json_encode(['success' => true, 'templates' => $templates]);
             break;
 
         default:
